@@ -1,13 +1,44 @@
-import Chat from "@/components/chat";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function Index() {
+  const [serverState, setServerState] = useState('Loading...');
   const [message, setMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState<string[]>([]);
+
+  var ws = useRef(new WebSocket('ws://localhost:8080/ws')).current;
+
+  useEffect(() => {
+    const chatMessagesList: string[] = [];
+    ws.onopen = () => {
+      console.log('WebSocket connection opened');
+      setServerState('Connected to server');
+    }
+
+    ws.onmessage = (event) => {
+      chatMessagesList.push(event.data);
+      setChatMessages([...chatMessagesList]);
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setServerState('Error connecting to server');
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      setServerState('Disconnected from server');
+    };
+
+    // Cleanup function to close the WebSocket when the component unmounts
+    return () => {
+      ws.close();
+    };
+  }, [])
 
   const sendMessage = () => {
     console.log('Message sent:', message);
-    // TODO: Implement actual message sending logic here
+    ws.send(message);
     setMessage(''); // Clear the input after sending
   }
 
@@ -19,7 +50,9 @@ export default function Index() {
         alignItems: "center",
       }}
     >
-      <Chat/>
+      <ScrollView>
+            <Text>{serverState}</Text>
+      </ScrollView>
       <View style={styles.bottomContainer}>
         <TextInput
           onChangeText={setMessage} // Update the state as the user types
