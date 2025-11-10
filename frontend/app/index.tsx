@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function Index() {
   const [serverState, setServerState] = useState('Loading...');
+  const [disableButton, setDisableButton] = useState(true);
   const [message, setMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<string[]>([]);
 
@@ -28,6 +29,7 @@ export default function Index() {
     ws.onclose = () => {
       console.log('WebSocket connection closed');
       setServerState('Disconnected from server');
+      setDisableButton(true);
     };
 
     // Cleanup function to close the WebSocket when the component unmounts
@@ -40,6 +42,7 @@ export default function Index() {
     console.log('Message sent:', message);
     ws.send(message);
     setMessage(''); // Clear the input after sending
+    setDisableButton(true);
   }
 
   return (
@@ -50,12 +53,26 @@ export default function Index() {
         alignItems: "center",
       }}
     >
-      <ScrollView>
+      <View>
             <Text>{serverState}</Text>
+      </View>
+      <ScrollView>
+        {
+            chatMessages.map((item, ind) => {
+              console.log('Chat:', item, ind);
+              return (
+                // TODO: format messages better
+                <Text key={ind}>{item}</Text>
+              )
+            })
+          }
       </ScrollView>
       <View style={styles.bottomContainer}>
         <TextInput
-          onChangeText={setMessage} // Update the state as the user types
+          onChangeText={text => {
+            setMessage(text);
+            setDisableButton(text.length === 0);
+          }} // Update the state as the user types
           value={message} // The current value of the text input
           placeholder="Send a message" // Placeholder text when the input is empty
           keyboardType="default" // Specifies the type of keyboard to open (e.g., "numeric", "email-address")
@@ -63,7 +80,10 @@ export default function Index() {
           onSubmitEditing={sendMessage} // Handle the press event
         />
         <View style={styles.buttonContainer}>
-          <Pressable style={styles.button} onPress={sendMessage}>
+          <Pressable 
+            style={styles.button} 
+            onPress={sendMessage}
+            disabled={disableButton}>
             <Text style={styles.buttonLabel}>Send</Text>
           </Pressable>
         </View>
